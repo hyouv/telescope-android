@@ -35,7 +35,7 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/node_modules /opt/ghc /usr/local/.ghcup /usr/share/swift \
             /usr/local/share/boost /opt/hostedtoolcache/CodeQL /opt/hostedtoolcache/go /opt/hostedtoolcache/PyPy \
             /usr/local/share/powershell /usr/local/share/chromium /opt/microsoft /opt/google /usr/lib/jvm/*-8-* || true
-          for d in "$ANDROID_HOME"/ndk/*; do [ "$(basename "$d")" = 27.2.12479018 ] || sudo rm -rf "$d"; done
+          sudo rm -rf "$ANDROID_HOME"/ndk/*  # the pinned NDK is installed below
           sudo docker image prune -af > /dev/null 2>&1 || true
           df -h /
 
@@ -50,23 +50,39 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: NDK version
+        run: |
+          # follow whatever NDK upstream pins
+          v=$(grep -oP 'ndkVersion "\K[^"]+' TMessagesProj/build.gradle)
+          test -n "$v"
+          echo "NDK_VERSION=$v" >> "$GITHUB_ENV"
+          echo "NDK $v"
+
       - name: Android SDK packages
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            "ndk;27.2.12479018" "cmake;3.22.1" "build-tools;36.0.0" "platforms;android-36" > /dev/null
+            "ndk;$NDK_VERSION" "cmake;3.22.1" "build-tools;36.0.0" "platforms;android-36" > /dev/null
 
       - name: Restore ccache
         uses: actions/cache/restore@v4
         with:
           path: ~/.ccache
-          key: ccache-${{ github.run_id }}
-          restore-keys: ccache-
+          key: ccache-ndk${{ env.NDK_VERSION }}-${{ github.run_id }}
+          restore-keys: ccache-ndk${{ env.NDK_VERSION }}-
 
       - name: Set up ccache
         run: |
           sudo apt-get install -y -qq ccache > /dev/null
-          ccache --set-config=cache_dir=$HOME/.ccache --set-config=max_size=6G --set-config=compression=true
+          # sdkmanager stamps the NDK with the install time, so the default compiler_check=mtime
+          # would treat every run's clang as a new compiler; the pinned NDK version identifies it instead
+          {
+            echo "CCACHE_DIR=$HOME/.ccache"
+            echo "CCACHE_MAXSIZE=6G"
+            echo "CCACHE_COMPRESS=true"
+            echo "CCACHE_COMPILERCHECK=string:ndk-$NDK_VERSION"
+          } >> "$GITHUB_ENV"
+          export CCACHE_DIR=$HOME/.ccache
           ccache -z
           # picked up by CMake as the default compiler launcher
           echo "CMAKE_C_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
@@ -100,6 +116,8 @@ jobs:
         if: always()
         run: |
           ccache -s || true
+          ccache -p | grep -E "compiler_check|cache_dir|max_size|compression" || true
+          stat -c '%y %n' "$ANDROID_HOME/ndk/$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin/"clang-[0-9]* || true
           df -h /
 
       - name: Save ccache
@@ -107,7 +125,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ~/.ccache
-          key: ccache-${{ github.run_id }}
+          key: ccache-ndk${{ env.NDK_VERSION }}-${{ github.run_id }}
 
       - name: Build
         run: ./gradlew :TMessagesProj_App:assembleAfatRelease -PTELESCOPE_REVISION=${{ inputs.revision }} --no-daemon -Dorg.gradle.jvmargs="-Xmx5g -XX:MaxMetaspaceSize=1g" -Dorg.gradle.parallel=false
