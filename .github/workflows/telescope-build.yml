@@ -16,6 +16,10 @@ on:
         description: "Release notes"
         default: ""
 
+# draft release needs write; the repo default token is read-only
+permissions:
+  contents: write
+
 concurrency:
   group: telescope-build
   cancel-in-progress: false
