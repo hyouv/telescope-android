@@ -1,0 +1,29 @@
+# Telescope: GitHub drops caches that haven't been used for 7 days. Restoring the
+# ccache every few days keeps it alive between releases, so the next build stays fast.
+name: Telescope keep cache warm
+
+on:
+  schedule:
+    - cron: "41 4 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  touch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Restore ccache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.ccache
+          key: ccache-keepwarm-never-matches
+          restore-keys: ccache-
+
+      - name: Report
+        run: |
+          echo "restored: ${{ steps.cache.outputs.cache-matched-key || 'none' }}"
+          du -sh ~/.ccache 2>/dev/null || true
