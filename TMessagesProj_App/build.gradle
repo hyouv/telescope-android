@@ -28,8 +28,8 @@ android {
     compileSdkVersion 36
     buildToolsVersion '36.0.0'
 
-    defaultConfig.applicationId = APP_PACKAGE
-    telescopeWriteGoogleServices(project, APP_PACKAGE)
+    defaultConfig.applicationId = telescopePackage // Telescope: kept out of gradle.properties, which upstream edits every release
+    telescopeWriteGoogleServices(project, telescopePackage)
 
     sourceSets.main.jniLibs.srcDirs = ['../TMessagesProj/jni/']
 
