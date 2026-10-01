@@ -7655,7 +7655,7 @@ public class EmojiView extends FrameLayout implements
                         pack.expanded = true;
                         emojipacksProcessed.add(pack);
                     }
-                    if (premiumEmojis.size() > 0) {
+                    if (premiumEmojis.size() > 0 && !org.telegram.telescope.Telescope.hideLockedPremium(currentAccount)) {
                         EmojiPack pack = new EmojiPack();
                         pack.index = index++;
                         pack.set = set.set;
@@ -7700,6 +7700,10 @@ public class EmojiView extends FrameLayout implements
                     }
                 }
                 pack.free = !premium;
+                if (premium && !isPremium && org.telegram.telescope.Telescope.hideLockedPremium(currentAccount)) {
+                    index--;
+                    continue;
+                }
                 pack.expanded = expandedEmojiSets.contains(pack.set.id);
                 pack.featured = true;
                 emojipacksProcessed.add(pack);

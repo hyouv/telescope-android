@@ -10657,7 +10657,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     starsRow = rowCount++;
                 }
                 StarsController.getInstance(currentAccount, true).getBalance();
-                if (ApplicationLoader.isBetaBuild() || ApplicationLoader.isStandaloneBuild() || ApplicationLoader.isHuaweiStoreBuild() || (StarsController.getInstance(currentAccount, true).balanceAvailable() && (StarsController.getInstance(currentAccount, true).hasTransactions() || StarsController.getInstance(currentAccount, true).getBalance().positive()))) {
+                if (!org.telegram.telescope.Telescope.HIDE_STARS && (ApplicationLoader.isBetaBuild() || ApplicationLoader.isStandaloneBuild() || ApplicationLoader.isHuaweiStoreBuild() || (StarsController.getInstance(currentAccount, true).balanceAvailable() && (StarsController.getInstance(currentAccount, true).hasTransactions() || StarsController.getInstance(currentAccount, true).getBalance().positive())))) {
                     tonRow = rowCount++;
                 }
                 if (!getMessagesController().premiumFeaturesBlocked()) {
@@ -12226,7 +12226,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                             streamAction = true;
                         }
                     }
-                    if ((chatInfo.can_view_stats || chatInfo.can_view_revenue || chatInfo.can_view_stars_revenue || getMessagesController().getStoriesController().canPostStories(getDialogId())) && topicId == 0) {
+                    if ((chatInfo.can_view_stats || !org.telegram.telescope.Telescope.HIDE_MONETIZATION && (chatInfo.can_view_revenue || chatInfo.can_view_stars_revenue || getMessagesController().getStoriesController().canPostStories(getDialogId()))) && topicId == 0) {
                         otherItem.addSubItem(statistics, R.drawable.msg_stats, LocaleController.getString(R.string.Statistics));
                     }
                     ChatObject.Call call = getMessagesController().getGroupCall(chatId, false);

@@ -1281,9 +1281,9 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                 logCell.setOnClickListener(v -> presentFragment(new ChannelAdminLogActivity(currentChat)));
             }
 
-            if (ChatObject.isBoostSupported(currentChat)) {
+            if (ChatObject.isBoostSupported(currentChat) && (!org.telegram.telescope.Telescope.HIDE_MONETIZATION || info != null && info.can_view_stats)) {
                 statsAndBoosts = new TextCell(context);
-                statsAndBoosts.setTextAndIcon(getString(R.string.StatisticsAndBoosts), R.drawable.msg_stats, true);
+                statsAndBoosts.setTextAndIcon(getString(org.telegram.telescope.Telescope.HIDE_MONETIZATION ? R.string.Statistics : R.string.StatisticsAndBoosts), R.drawable.msg_stats, true);
                 statsAndBoosts.setBackground(Theme.getSelectorDrawable(false));
                 statsAndBoosts.setOnClickListener(v -> {
                     presentFragment(StatisticActivity.create(currentChat, false));

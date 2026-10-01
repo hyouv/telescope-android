@@ -246,7 +246,7 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
                 if (isAdmin) {
                     return row < 1;
                 } else if (needPhonebook) {
-                    return row < 2;
+                    return row + telescopeInviteSkip() < 2;
                 } else {
                     return row < 3;
                 }
@@ -298,13 +298,18 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
         }
 
         hasPhonebook = !ContactsController.getInstance(currentAccount).phoneBookContacts.isEmpty();
-        isEmptyWithMainTabs = isEmpty && needPhonebook && !isAdmin && onlyUsers == 0;
+        isEmptyWithMainTabs = !org.telegram.telescope.Telescope.HIDE_INVITE_FRIENDS && isEmpty && needPhonebook && !isAdmin && onlyUsers == 0;
         if (isEmptyWithMainTabs) {
             // empty + invite friends
             return hasPhonebook ? 2 : 1;
         }
 
         return count;
+    }
+
+    // Telescope: number of hidden rows at the top of section 0 (the "Invite friends" row)
+    public int telescopeInviteSkip() {
+        return org.telegram.telescope.Telescope.HIDE_INVITE_FRIENDS && needPhonebook && !isAdmin ? 1 : 0;
     }
 
     @Override
@@ -340,13 +345,13 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
         } else {
             if (section == 0) {
                 if (isEmpty) {
-                    return (includeSearch ? 1 : 0) + 2;
+                    return (includeSearch ? 1 : 0) + 2 - telescopeInviteSkip();
                 }
 
                 if (isAdmin) {
                     return (includeSearch ? 1 : 0) + 3;
                 } else if (needPhonebook) {
-                    return (includeSearch ? 1 : 0) + 4;
+                    return (includeSearch ? 1 : 0) + 4 - telescopeInviteSkip();
                 } else {
                     return (includeSearch ? 1 : 0) + 4;
                 }
@@ -561,6 +566,7 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
                 }
                 if (section == 0) {
                     if (needPhonebook) {
+                        position += telescopeInviteSkip();
                         if (position == 0) {
                             textCell.setTextAndValueAndColorfulIcon(getString(R.string.InviteFriends), "", false, R.drawable.settings_invite, 0xFF1CA5ED, 0xFF1488E1, false);
                         } else if (position == 1) {
@@ -652,6 +658,7 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
                         return (sortType == SORT_TYPE_BY_NAME || sortType == SORT_TYPE_BY_TIME ? HEADER_CELL : GRAY_CELL);
                     }
                 } else if (needPhonebook) {
+                    position += telescopeInviteSkip();
                     if (position < 2) {
                         return TEXT_CELL;
                     }

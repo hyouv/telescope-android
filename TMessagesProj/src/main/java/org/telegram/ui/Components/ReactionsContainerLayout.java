@@ -1138,7 +1138,7 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
             fillRecentReactionsList(visibleReactions);
         } else if (hitLimit) {
             allReactionsAvailable = false;
-            if (reactionsChat != null && reactionsChat.paid_reactions_available) {
+            if (!org.telegram.telescope.Telescope.HIDE_STARS && reactionsChat != null && reactionsChat.paid_reactions_available) {
                 hasStar = true;
                 visibleReactions.add(ReactionsLayoutInBubble.VisibleReaction.asStar());
             }
@@ -1146,7 +1146,7 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
                 visibleReactions.add(ReactionsLayoutInBubble.VisibleReaction.fromTL(result.reaction));
             }
         } else if (reactionsChat != null) {
-            if (reactionsChat != null && reactionsChat.paid_reactions_available) {
+            if (!org.telegram.telescope.Telescope.HIDE_STARS && reactionsChat != null && reactionsChat.paid_reactions_available) {
                 hasStar = true;
                 visibleReactions.add(ReactionsLayoutInBubble.VisibleReaction.asStar());
             }
@@ -1397,6 +1397,7 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
             TLRPC.messages_AvailableEffects effects = messagesController.getAvailableEffects();
             if (effects != null) {
                 for (int i = 0; i < effects.effects.size(); i++) {
+                    if (effects.effects.get(i).premium_required && org.telegram.telescope.Telescope.hideLockedPremium(currentAccount)) continue;
                     ReactionsLayoutInBubble.VisibleReaction visibleReaction = ReactionsLayoutInBubble.VisibleReaction.fromTL(effects.effects.get(i));
                     if (!hashSet.contains(visibleReaction)) {
                         hashSet.add(visibleReaction);

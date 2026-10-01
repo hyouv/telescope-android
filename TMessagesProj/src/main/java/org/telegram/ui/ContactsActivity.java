@@ -673,6 +673,7 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
 //                }
                 if ((!onlyUsers || inviteViaLink != 0) && section == 0) {
                     if (needPhonebook) {
+                        row += listViewAdapter.telescopeInviteSkip();
                         if (row == 0) {
                             if (MessagesController.getInstance(currentAccount).isFrozen()) {
                                 AccountFrozenAlert.show(currentAccount);

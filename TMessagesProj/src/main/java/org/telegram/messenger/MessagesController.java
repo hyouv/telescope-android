@@ -1795,8 +1795,8 @@ public class MessagesController extends BaseController implements NotificationCe
         starsUsdSellRate1000 = mainPreferences.getFloat("starsUsdSellRate1000", 2000);
         starsUsdWithdrawRate1000 = mainPreferences.getFloat("starsUsdWithdrawRate1000", 1200);
         sponsoredLinksInappAllow = mainPreferences.getBoolean("sponsoredLinksInappAllow", false);
-        starrefProgramAllowed = mainPreferences.getBoolean("starrefProgramAllowed", false);
-        starrefConnectAllowed = mainPreferences.getBoolean("starrefConnectAllowed", false);
+        starrefProgramAllowed = !org.telegram.telescope.Telescope.HIDE_MONETIZATION && mainPreferences.getBoolean("starrefProgramAllowed", false);
+        starrefConnectAllowed = !org.telegram.telescope.Telescope.HIDE_MONETIZATION && mainPreferences.getBoolean("starrefConnectAllowed", false);
         starrefStartParamPrefixes = mainPreferences.getStringSet("starrefStartParamPrefixes", new HashSet<>(Arrays.asList("_tgr_")));
         starrefMinCommissionPermille = mainPreferences.getInt("starrefMinCommissionPermille", 1);
         starrefMaxCommissionPermille = mainPreferences.getInt("starrefMaxCommissionPermille", 400);
@@ -4748,7 +4748,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     break;
                 }
                 case "starref_program_allowed": {
-                    if (value.value instanceof TLRPC.TL_jsonBool) {
+                    if (!org.telegram.telescope.Telescope.HIDE_MONETIZATION && value.value instanceof TLRPC.TL_jsonBool) {
                         TLRPC.TL_jsonBool bool = (TLRPC.TL_jsonBool) value.value;
                         if (bool.value != starrefProgramAllowed) {
                             starrefProgramAllowed = bool.value;
@@ -4759,7 +4759,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     break;
                 }
                 case "starref_connect_allowed": {
-                    if (value.value instanceof TLRPC.TL_jsonBool) {
+                    if (!org.telegram.telescope.Telescope.HIDE_MONETIZATION && value.value instanceof TLRPC.TL_jsonBool) {
                         TLRPC.TL_jsonBool bool = (TLRPC.TL_jsonBool) value.value;
                         if (bool.value != starrefConnectAllowed) {
                             starrefConnectAllowed = bool.value;

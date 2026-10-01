@@ -6019,7 +6019,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 MessagesController.getInstance(currentAccount).removeSuggestion(0, "PREMIUM_GRACE");
                 updateDialogsHint();
             });
-        } else if (folderId == 0 && communityId == 0 && getMessagesController().customPendingSuggestion != null) {
+        } else if (!org.telegram.telescope.Telescope.HIDE_DIALOGS_HINTS && folderId == 0 && communityId == 0 && getMessagesController().customPendingSuggestion != null) {
             final TLRPC.TL_pendingSuggestion suggestion = getMessagesController().customPendingSuggestion;
             dialogsHintCellVisible = true;
 
@@ -6041,7 +6041,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 MessagesController.getInstance(currentAccount).removeSuggestion(0, suggestion.suggestion);
                 updateDialogsHint();
             });
-        } else if (isStarsSubscriptionHintVisible()) {
+        } else if (!org.telegram.telescope.Telescope.HIDE_DIALOGS_HINTS && isStarsSubscriptionHintVisible()) {
             StarsController c = StarsController.getInstance(currentAccount);
             dialogsHintCellVisible = true;
             StringBuilder s = new StringBuilder();
@@ -6112,7 +6112,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             });
             StarsController.getInstance(currentAccount).loadStarGifts();
         } else if (
-            folderId == 0 && communityId == 0 &&
+            !org.telegram.telescope.Telescope.HIDE_DIALOGS_HINTS && folderId == 0 && communityId == 0 &&
             MessagesController.getInstance(currentAccount).pendingSuggestions.contains("BIRTHDAY_SETUP") &&
             getMessagesController().getUserFull(getUserConfig().getClientUserId()) != null &&
             getMessagesController().getUserFull(getUserConfig().getClientUserId()).birthday == null
@@ -6257,7 +6257,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     ),
                     LocaleController.getString(R.string.ClearStorageHintMessage)
             );
-        } else if (folderId == 0 && communityId == 0 && getUserConfig().getCurrentUser() != null && (getUserConfig().getCurrentUser().photo == null || getUserConfig().getCurrentUser().photo instanceof TLRPC.TL_userProfilePhotoEmpty) && MessagesController.getInstance(currentAccount).pendingSuggestions.contains("USERPIC_SETUP")) {
+        } else if (!org.telegram.telescope.Telescope.HIDE_DIALOGS_HINTS && folderId == 0 && communityId == 0 && getUserConfig().getCurrentUser() != null && (getUserConfig().getCurrentUser().photo == null || getUserConfig().getCurrentUser().photo instanceof TLRPC.TL_userProfilePhotoEmpty) && MessagesController.getInstance(currentAccount).pendingSuggestions.contains("USERPIC_SETUP")) {
             dialogsHintCellVisible = true;
             dialogsHintCell.setOnClickListener(v -> {
                 openSetAvatar();

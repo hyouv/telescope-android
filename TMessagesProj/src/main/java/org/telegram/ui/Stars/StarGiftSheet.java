@@ -866,6 +866,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     private void openCrafting(boolean clear) {
+        if (org.telegram.telescope.Telescope.HIDE_COLLECTIBLES) return;
         int can_craft_at = 0;
         if (messageObject != null) {
             if (messageObject.messageOwner != null && messageObject.messageOwner.action instanceof TLRPC.TL_messageActionStarGiftUnique) {
@@ -1048,7 +1049,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             .addIf(canCraft(), R.drawable.outline_craft, getString(R.string.GiftCraft), () -> {
                 openCrafting(true);
             })
-            .addIf(getUniqueGift() != null && isMineWithActions(currentAccount, DialogObject.getPeerDialogId(getUniqueGift().owner_id)) && getUniqueGift().resell_amount != null, R.drawable.menu_edit_price, getString(R.string.Gift2ChangePrice), () -> {
+            .addIf(!org.telegram.telescope.Telescope.HIDE_COLLECTIBLES && getUniqueGift() != null && isMineWithActions(currentAccount, DialogObject.getPeerDialogId(getUniqueGift().owner_id)) && getUniqueGift().resell_amount != null, R.drawable.menu_edit_price, getString(R.string.Gift2ChangePrice), () -> {
                 onUpdatePriceClick(null);
             })
             .addIf(link != null, R.drawable.msg_link, getString(R.string.CopyLink), () -> {
@@ -1061,7 +1062,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             .addIf(link != null, R.drawable.msg_share, getString(R.string.ShareFile), () -> {
                 onSharePressed(null);
             })
-            .addIf(giftUnique != null && giftUnique.offer_min_stars > 0, R.drawable.input_suggest_paid_24, getString(R.string.GiftOfferToBuyMenu), this::showGiftOfferSheet)
+            .addIf(!org.telegram.telescope.Telescope.HIDE_COLLECTIBLES && giftUnique != null && giftUnique.offer_min_stars > 0, R.drawable.input_suggest_paid_24, getString(R.string.GiftOfferToBuyMenu), this::showGiftOfferSheet)
             .addIf(canSetAsTheme(), R.drawable.msg_colors, getString(R.string.GiftThemesSetIn), this::openSetAsTheme)
             .addIf(canTransfer(), R.drawable.menu_feature_transfer, getString(R.string.Gift2TransferOption), this::openTransfer)
             .addIf(savedStarGift == null && getDialogId() != 0, R.drawable.msg_view_file, getString(R.string.Gift2ViewInProfile), this::openInProfile)
@@ -2408,7 +2409,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 backdrop[page] = findAttribute(gift.attributes, TL_stars.starGiftAttributeBackdrop.class);
                 setPattern(page, findAttribute(gift.attributes, TL_stars.starGiftAttributePattern.class), false);
                 subtitleView[page].setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-                buttonsLayout.setVisibility(withButtons ? View.VISIBLE : View.GONE);
+                buttonsLayout.setVisibility(withButtons && !org.telegram.telescope.Telescope.HIDE_COLLECTIBLES ? View.VISIBLE : View.GONE);
                 if (withButtons) {
                     buttons[1].set(worn ? R.drawable.filled_crown_off : R.drawable.filled_crown_on, getString(worn ? R.string.Gift2ActionWearOff : R.string.Gift2ActionWear), false);
                 }
@@ -3198,6 +3199,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     public boolean canTransfer() {
+        if (org.telegram.telescope.Telescope.HIDE_COLLECTIBLES) return false;
         if (getInputStarGift() == null) return false;
         TL_stars.TL_starGiftUnique gift;
         if (messageObject != null && messageObject.messageOwner != null && messageObject.messageOwner.action instanceof TLRPC.TL_messageActionStarGiftUnique) {
@@ -4355,7 +4357,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         }
 
         if (!(roller != null && roller.isRolling())) {
-            if (!isMine(currentAccount, DialogObject.getPeerDialogId(gift.owner_id)) && gift.resell_amount != null) {
+            if (!org.telegram.telescope.Telescope.HIDE_COLLECTIBLES && !isMine(currentAccount, DialogObject.getPeerDialogId(gift.owner_id)) && gift.resell_amount != null) {
                 button.setFilled(true);
                 setButtonTextResale(gift);
                 button.setOnClickListener(v -> onBuyPressed());
@@ -4699,7 +4701,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 tableView.addFullRow(savedStarGift.message.text, savedStarGift.message.entities);
             }
 
-            if (myProfile && savedStarGift.can_upgrade) {
+            if (!org.telegram.telescope.Telescope.HIDE_COLLECTIBLES && myProfile && savedStarGift.can_upgrade) {
                 SpannableStringBuilder sb = new SpannableStringBuilder("^  ");
                 if (upgradeIconSpan == null) {
                     upgradeIconSpan = new ColoredImageSpan(new UpgradeIcon(button, Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider)));
@@ -4733,7 +4735,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                     overrideNextIndex = index;
                     viewPager.scrollToPosition(viewPager.getCurrentPosition() + (index > getListPosition() ? +1 : -1));
                 });
-            } else if (savedStarGift.gift instanceof TL_stars.TL_starGift && !TextUtils.isEmpty(savedStarGift.prepaid_upgrade_hash)) {
+            } else if (!org.telegram.telescope.Telescope.HIDE_COLLECTIBLES && savedStarGift.gift instanceof TL_stars.TL_starGift && !TextUtils.isEmpty(savedStarGift.prepaid_upgrade_hash)) {
                 SpannableStringBuilder sb = new SpannableStringBuilder("^  ");
                 if (upgradeIconSpan == null) {
                     upgradeIconSpan = new ColoredImageSpan(new UpgradeIcon(button, Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider)));
@@ -4873,6 +4875,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     public boolean canCraft() {
+        if (org.telegram.telescope.Telescope.HIDE_COLLECTIBLES) return false;
         final TL_stars.TL_starGiftUnique gift = getUniqueGift();
         if (gift == null || gift.crafted) return false;
         if (!isMineWithActions(currentAccount, DialogObject.getPeerDialogId(gift.owner_id))) return false;
@@ -5052,7 +5055,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 tableView.addFullRow(message.text, message.entities);
             }
 
-            if (!out && can_upgrade && !refunded) {
+            if (!org.telegram.telescope.Telescope.HIDE_COLLECTIBLES && !out && can_upgrade && !refunded) {
                 SpannableStringBuilder sb = new SpannableStringBuilder("^  ");
                 if (upgradeIconSpan == null) {
                     upgradeIconSpan = new ColoredImageSpan(new UpgradeIcon(button, Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider)));
@@ -5086,7 +5089,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                     overrideNextIndex = index;
                     viewPager.scrollToPosition(viewPager.getCurrentPosition() + (index > getListPosition() ? +1 : -1));
                 });
-            } else if (stargift instanceof TL_stars.TL_starGift && !TextUtils.isEmpty(prepaid_upgrade_hash)) {
+            } else if (!org.telegram.telescope.Telescope.HIDE_COLLECTIBLES && stargift instanceof TL_stars.TL_starGift && !TextUtils.isEmpty(prepaid_upgrade_hash)) {
                 SpannableStringBuilder sb = new SpannableStringBuilder("^  ");
                 if (upgradeIconSpan == null) {
                     upgradeIconSpan = new ColoredImageSpan(new UpgradeIcon(button, Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider)));
@@ -5753,6 +5756,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     private boolean requesting_upgrade_form;
     private TLRPC.PaymentForm upgrade_form;
     private void openUpgrade() {
+        if (org.telegram.telescope.Telescope.HIDE_COLLECTIBLES) return;
         if (currentHintView != null) {
             currentHintView.hide();
             currentHintView = null;
@@ -6386,6 +6390,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     public void openTransfer() {
+        if (org.telegram.telescope.Telescope.HIDE_COLLECTIBLES) return;
         if (currentHintView != null) {
             currentHintView.hide();
             currentHintView = null;

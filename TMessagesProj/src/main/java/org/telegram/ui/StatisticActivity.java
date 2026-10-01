@@ -135,7 +135,7 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
         args.putBoolean("is_megagroup", chat.megagroup);
         args.putBoolean("start_from_boosts", startFromBoosts);
         TLRPC.ChatFull chatInfo = MessagesController.getInstance(UserConfig.selectedAccount).getChatFull(chat.id);
-        if (chatInfo == null || !chatInfo.can_view_stats && !chatInfo.can_view_stars_revenue) {
+        if (chatInfo == null || !chatInfo.can_view_stats && (org.telegram.telescope.Telescope.HIDE_MONETIZATION || !chatInfo.can_view_stars_revenue)) {
             return new BoostsActivity(-chat.id);
         }
         return new StatisticActivity(args);
@@ -611,8 +611,8 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
         TLRPC.Chat currentChat = MessagesController.getInstance(currentAccount).getChat(chatId);
         TLRPC.ChatFull chatFull = MessagesController.getInstance(currentAccount).getChatFull(chatId);
         final boolean hasStats = chatFull != null && chatFull.can_view_stats;
-        boolean isBoostSupported = ChatObject.isBoostSupported(currentChat);
-        final boolean hasMonetization = chatFull != null && (chatFull.can_view_revenue || chatFull.can_view_stars_revenue);
+        boolean isBoostSupported = !org.telegram.telescope.Telescope.HIDE_MONETIZATION && ChatObject.isBoostSupported(currentChat);
+        final boolean hasMonetization = !org.telegram.telescope.Telescope.HIDE_MONETIZATION && chatFull != null && (chatFull.can_view_revenue || chatFull.can_view_stars_revenue);
 
         ArrayList<GlassTabView> tabViews = new ArrayList<>(3);
         if (hasStats) {
