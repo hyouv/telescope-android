@@ -45,6 +45,9 @@ public final class Telescope {
     /** Don't show Premium-only emoji, emoji packs and message effects to non-Premium users instead of showing them locked. */
     public static final boolean HIDE_LOCKED_PREMIUM = true;
 
+    /** Hide the emoji keyboard settings button, trending emoji packs in the keyboard and animated emoji suggestions while typing. */
+    public static final boolean HIDE_EMOJI_SUGGESTIONS = true;
+
     /** Hide the "Invite friends" entry in contacts. */
     public static final boolean HIDE_INVITE_FRIENDS = true;
 

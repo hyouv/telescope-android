@@ -89,6 +89,8 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
     private HashMap<View, Rect> removingViews = new HashMap<>();
 
     private int packsIndexStart;
+    // Telescope: width for the category tabs when there are no pack tabs after them, 0 otherwise
+    private int telescopeTabsFillWidth;
 
     private ValueAnimator selectAnimator;
     private float selectT = 0f;
@@ -208,6 +210,7 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
             @Override
             protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
                 final int AT_MOST = MeasureSpec.makeMeasureSpec(99999999, MeasureSpec.AT_MOST);
+                telescopeTabsFillWidth = org.telegram.telescope.Telescope.HIDE_LOCKED_PREMIUM && includeAnimated && emojiTabs != null && getChildCount() == packsIndexStart ? MeasureSpec.getSize(widthMeasureSpec) - getPaddingLeft() - getPaddingRight() - AndroidUtilities.dp(30 + 3) * ((recentTab != null && recentIsShown ? 1 : 0) + (giftsTab != null && giftsIsShown ? 1 : 0) + (toggleEmojiStickersTab != null ? 1 : 0)) : 0;
                 int width = getPaddingLeft() + getPaddingRight() - (int) (recentIsShown || recentTab == null ? 0 : recentTab.getAlpha() * AndroidUtilities.dp(30 + 3)) - (int) (giftsIsShown || giftsTab == null ? 0 : giftsTab.getAlpha() * AndroidUtilities.dp(30 + 3));
                 for (int i = 0; i < getChildCount(); ++i) {
                     View child = getChildAt(i);
@@ -1413,6 +1416,7 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
                 @Override
                 protected void onLayout(boolean changed, int l, int t, int r, int b) {
                     int x = getPaddingLeft(), cy = (b - t) / 2;
+                    final int gap = telescopeTabsFillWidth > 0 && getChildCount() > 1 ? Math.max(AndroidUtilities.dp(2), (r - l - getPaddingLeft() - getPaddingRight() - AndroidUtilities.dp(30) * getChildCount()) / (getChildCount() - 1)) : AndroidUtilities.dp(2); // Telescope
                     for (int i = 0; i < getChildCount(); ++i) {
                         View child = getChildAt(i);
                         if (child == settingsTab) {
@@ -1420,7 +1424,7 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
                         }
                         if (child != null) {
                             child.layout(x, cy - child.getMeasuredHeight() / 2, x + child.getMeasuredWidth(), cy + child.getMeasuredHeight() / 2);
-                            x += child.getMeasuredWidth() + AndroidUtilities.dp(2);
+                            x += child.getMeasuredWidth() + gap;
                         }
                     }
                 }
@@ -1458,6 +1462,7 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
         }
 
         public int maxWidth() {
+            if (telescopeTabsFillWidth > AndroidUtilities.dp(30)) return telescopeTabsFillWidth;
 //            return AndroidUtilities.dp((30 + 2) * (clip() ? Math.min(5.7f, contentView.getChildCount()) : contentView.getChildCount()));
             return AndroidUtilities.dp((30 + 2) * Math.min(5.7f, contentView.getChildCount()));
         }

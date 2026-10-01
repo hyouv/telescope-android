@@ -1833,7 +1833,7 @@ public class EmojiView extends FrameLayout implements
             }
         });
 
-        emojiTabs = new EmojiTabsStrip(context, resourcesProvider, true, false, true, needAnimatedEmoji, 0, fragment != null ? () -> {
+        emojiTabs = new EmojiTabsStrip(context, resourcesProvider, true, false, true, needAnimatedEmoji, 0, fragment != null && !org.telegram.telescope.Telescope.HIDE_EMOJI_SUGGESTIONS ? () -> {
             if (delegate != null) {
                 delegate.onEmojiSettingsClick(emojiAdapter.frozenEmojiPacks);
             }
@@ -7668,7 +7668,7 @@ public class EmojiView extends FrameLayout implements
                     }
                 }
             }
-            for (int i = 0; i < featuredEmojiSets.size(); ++i) {
+            for (int i = 0; !org.telegram.telescope.Telescope.HIDE_EMOJI_SUGGESTIONS && i < featuredEmojiSets.size(); ++i) {
                 TLRPC.StickerSetCovered set = featuredEmojiSets.get(i);
 //                if (!isPremium && !MessageObject.isPremiumEmojiPack(set) && mediaDataController.isStickerPackInstalled(set.set.id)) {
 //                    continue;
@@ -7784,7 +7784,7 @@ public class EmojiView extends FrameLayout implements
                 itemCount++;
                 rowHashCodes.add(-1);
             }
-            if (isPremium && allowAnimatedEmoji && featuredEmojiSets.size() > 0 && featuredEmojiSets.get(0).set != null && MessagesController.getEmojiSettings(currentAccount).getLong("emoji_featured_hidden", 0) != featuredEmojiSets.get(0).set.id && needEmojiSearch) {
+            if (!org.telegram.telescope.Telescope.HIDE_EMOJI_SUGGESTIONS && isPremium && allowAnimatedEmoji && featuredEmojiSets.size() > 0 && featuredEmojiSets.get(0).set != null && MessagesController.getEmojiSettings(currentAccount).getLong("emoji_featured_hidden", 0) != featuredEmojiSets.get(0).set.id && needEmojiSearch) {
                 trendingHeaderRow = itemCount++;
                 trendingRow = itemCount++;
                 recentlyUsedHeaderRow = itemCount++;

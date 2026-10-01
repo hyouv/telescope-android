@@ -628,7 +628,7 @@ public class SharedConfig {
             streamAllVideo = preferences.getBoolean("streamAllVideo", BuildVars.DEBUG_VERSION);
             streamMkv = preferences.getBoolean("streamMkv", false);
             suggestStickers = preferences.getInt("suggestStickers", 0);
-            suggestAnimatedEmoji = preferences.getBoolean("suggestAnimatedEmoji", true);
+            suggestAnimatedEmoji = !org.telegram.telescope.Telescope.HIDE_EMOJI_SUGGESTIONS && preferences.getBoolean("suggestAnimatedEmoji", true);
             overrideDevicePerformanceClass = preferences.getInt("overrideDevicePerformanceClass", -1);
             devicePerformanceClass = preferences.getInt("devicePerformanceClass", -1);
             sortContactsByName = preferences.getBoolean("sortContactsByName", false);
