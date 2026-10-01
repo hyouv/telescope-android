@@ -80,22 +80,33 @@ jobs:
           if [ -n "$GOOGLE_SERVICES" ]; then printf '%s' "$GOOGLE_SERVICES" > "$d/google-services.json"; fi
           echo "TELESCOPE_SECRETS=$d/telescope.properties" >> "$GITHUB_ENV"
 
-      - name: Build
-        run: ./gradlew :TMessagesProj_App:assembleAfatRelease -PTELESCOPE_REVISION=${{ inputs.revision }} --no-daemon
+      # runners have ~8GB RAM; extra swap keeps R8 from taking the whole runner down
+      - name: Swap
+        run: |
+          sudo swapoff -a || true
+          sudo fallocate -l 10G /swapfile2 && sudo chmod 600 /swapfile2
+          sudo mkswap /swapfile2 >/dev/null && sudo swapon /swapfile2
+          free -h
 
-      - name: Build stats
+      # native code first, so the ccache gets saved even if the Java/R8 part fails later
+      - name: Build native
+        run: ./gradlew :TMessagesProj:externalNativeBuildRelease --no-daemon -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g"
+
+      - name: Native stats
         if: always()
         run: |
           ccache -s || true
           df -h /
 
-      # saved even when a later step fails, so a failed first build still warms the cache
       - name: Save ccache
         if: always()
         uses: actions/cache/save@v4
         with:
           path: ~/.ccache
           key: ccache-${{ github.run_id }}
+
+      - name: Build
+        run: ./gradlew :TMessagesProj_App:assembleAfatRelease -PTELESCOPE_REVISION=${{ inputs.revision }} --no-daemon -Dorg.gradle.jvmargs="-Xmx5g -XX:MaxMetaspaceSize=1g" -Dorg.gradle.parallel=false
 
       - name: Collect
         id: apk
