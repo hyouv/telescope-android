@@ -20,6 +20,9 @@ public final class Telescope {
     /** Hide Premium / Stars / gifts entry points and upsell UI. */
     public static final boolean HIDE_PREMIUM = true;
 
+    /** Hide the alternate launcher icon picker; only our own icon is shipped. */
+    public static final boolean HIDE_APP_ICONS = true;
+
     private Telescope() {
     }
 
