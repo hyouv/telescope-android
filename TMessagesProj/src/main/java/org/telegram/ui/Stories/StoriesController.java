@@ -186,6 +186,7 @@ public class StoriesController {
     }
 
     public void loadAllStories() {
+        if (org.telegram.telescope.Telescope.HIDE_STORIES) return;
         if (!firstLoad) {
             loadStories();
             loadStoriesRead();
@@ -247,6 +248,7 @@ public class StoriesController {
     }
 
     public boolean hasStories(long dialogId) {
+        if (org.telegram.telescope.Telescope.HIDE_STORIES) return false;
         if (dialogId == 0) {
             return false;
         }
@@ -264,6 +266,7 @@ public class StoriesController {
     }
 
     public TL_stories.PeerStories getStoriesFromFullPeer(long dialogId) {
+        if (org.telegram.telescope.Telescope.HIDE_STORIES) return null;
         if (dialogId > 0) {
             TLRPC.UserFull userFull = MessagesController.getInstance(currentAccount).getUserFull(dialogId);
             if (userFull != null && userFull.stories != null && !userFull.stories.checkedExpired) {
@@ -280,10 +283,12 @@ public class StoriesController {
     }
 
     public boolean hasStories() {
+        if (org.telegram.telescope.Telescope.HIDE_STORIES) return false;
         return (dialogListStories != null && dialogListStories.size() > 0) || hasSelfStories();
     }
 
     public void loadStories() {
+        if (org.telegram.telescope.Telescope.HIDE_STORIES) return;
         if (firstLoad) {
             loadingFromDatabase = true;
             storiesStorage.getAllStories(allStories -> {
@@ -305,6 +310,7 @@ public class StoriesController {
     }
 
     public void loadHiddenStories() {
+        if (org.telegram.telescope.Telescope.HIDE_STORIES) return;
         if (hasMoreHidden) {
             loadFromServer(true);
         }
@@ -795,6 +801,7 @@ public class StoriesController {
     }
 
     public void processUpdate(TL_stories.TL_updateStory updateStory) {
+        if (org.telegram.telescope.Telescope.HIDE_STORIES) return;
         //stage queue
         if (updateStory.story == null) {
             return;
@@ -1069,6 +1076,7 @@ public class StoriesController {
     }
 
     public boolean hasSelfStories() {
+        if (org.telegram.telescope.Telescope.HIDE_STORIES) return false;
         long clientUserId = UserConfig.getInstance(currentAccount).clientUserId;
         TL_stories.PeerStories storyItem = allStoriesMap.get(clientUserId);
         if (storyItem != null && !storyItem.stories.isEmpty()) {
@@ -1335,6 +1343,7 @@ public class StoriesController {
     }
 
     public boolean hasUnreadStories(long dialogId) {
+        if (org.telegram.telescope.Telescope.HIDE_STORIES) return false;
         TL_stories.PeerStories userStories = allStoriesMap.get(dialogId);
         if (userStories == null) {
             userStories = getStoriesFromFullPeer(dialogId);
@@ -1747,6 +1756,7 @@ public class StoriesController {
     }
 
     public boolean hasHiddenStories() {
+        if (org.telegram.telescope.Telescope.HIDE_STORIES) return false;
         return !hiddenListStories.isEmpty();
     }
 

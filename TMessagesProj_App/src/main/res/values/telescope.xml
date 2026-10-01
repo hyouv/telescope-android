@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Telescope: app-module overrides of library resources (launcher label etc). -->
+<resources>
+    <string name="AppName" translatable="false">Telescope</string>
+    <string name="AppNameBeta" translatable="false">Telescope Beta</string>
+</resources>

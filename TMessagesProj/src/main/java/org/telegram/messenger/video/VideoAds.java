@@ -194,6 +194,7 @@ public static VideoAds make(
     private boolean loading, loaded;
     private void load() {
         if (loading || loaded) return;
+        if (org.telegram.telescope.Telescope.HIDE_SPONSORED) return;
 
         if (UserConfig.getInstance(currentAccount).isPremium() && MessagesController.getInstance(currentAccount).isSponsoredDisabled()) {
             return;

@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'org.telegram.build-app-plugin'
+apply from: '../telescope.gradle'
 
 repositories {
     mavenCentral()
@@ -26,6 +27,7 @@ android {
     buildToolsVersion '36.0.0'
 
     defaultConfig.applicationId = APP_PACKAGE
+    telescopeWriteGoogleServices(project, APP_PACKAGE)
 
     sourceSets.main.jniLibs.srcDirs = ['../TMessagesProj/jni/']
 
@@ -56,10 +58,11 @@ android {
         }
 
         release {
-            storeFile file("../TMessagesProj/config/release.keystore")
-            storePassword RELEASE_STORE_PASSWORD
-            keyAlias RELEASE_KEY_ALIAS
-            keyPassword RELEASE_KEY_PASSWORD
+            // Telescope: sign releases with our own key from the secrets dir
+            storeFile new File(telescopeSecretsDir, telescopeSecret("TELESCOPE_STORE_FILE", "telescope-release.jks"))
+            storePassword telescopeSecret("TELESCOPE_STORE_PASSWORD")
+            keyAlias telescopeSecret("TELESCOPE_KEY_ALIAS")
+            keyPassword telescopeSecret("TELESCOPE_KEY_PASSWORD")
         }
     }
 

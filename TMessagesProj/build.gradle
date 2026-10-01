@@ -3,6 +3,7 @@ import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
 apply plugin: 'com.android.library'
 apply plugin: 'org.telegram.build-plugin'
 apply plugin: 'idea'
+apply from: '../telescope.gradle'
 
 idea {
     module {
@@ -146,6 +147,10 @@ android {
         vectorDrawables.generatedDensities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi']
 
         multiDexEnabled true
+
+        // Telescope: our own api credentials, read from the secrets file
+        buildConfigField "int", "TELESCOPE_API_ID", (telescopeSecret("TELESCOPE_API_ID") ?: "0")
+        buildConfigField "String", "TELESCOPE_API_HASH", "\"" + telescopeSecret("TELESCOPE_API_HASH") + "\""
 
         externalNativeBuild {
             cmake {

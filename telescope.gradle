@@ -1,0 +1,37 @@
+// Telescope: loads secrets that must never be committed.
+// Default location is ../secrets/telescope.properties (outside the git repo);
+// CI can override it with the TELESCOPE_SECRETS env var.
+def secretsPath = System.getenv("TELESCOPE_SECRETS") ?: rootProject.file("../secrets/telescope.properties").path
+def secretsFile = new File(secretsPath)
+def secrets = new Properties()
+if (secretsFile.exists()) {
+    secretsFile.withInputStream { secrets.load(it) }
+} else {
+    logger.warn("Telescope: secrets file not found at ${secretsPath}, API credentials will be empty")
+}
+
+ext.telescopeSecret = { String key, String fallback = "" ->
+    return secrets.getProperty(key, fallback)
+}
+ext.telescopeSecretsDir = secretsFile.parentFile
+
+// Firebase config for our package name. Uses ../secrets/google-services.json when present,
+// otherwise writes a placeholder so the build works (push notifications won't, though).
+ext.telescopeWriteGoogleServices = { Project p, String packageName ->
+    def real = new File(telescopeSecretsDir, "google-services.json")
+    def text
+    if (real.exists()) {
+        text = real.text
+    } else {
+        logger.warn("Telescope: ${real} not found, using placeholder Firebase config (no push)")
+        def client = { String pkg ->
+            """{"client_info":{"mobilesdk_app_id":"1:000000000000:android:0000000000000000","android_client_info":{"package_name":"${pkg}"}},"oauth_client":[],"api_key":[{"current_key":"AIzaSyPlaceholderPlaceholderPlaceholder00"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}"""
+        }
+        text = """{"project_info":{"project_number":"000000000000","project_id":"telescope-placeholder","storage_bucket":"telescope-placeholder.appspot.com"},"client":[${client(packageName)},${client(packageName + ".beta")},${client(packageName + ".web")}],"configuration_version":"1"}"""
+    }
+    ["debug", "release", "standalone"].each { bt ->
+        def f = p.file("src/${bt}/google-services.json")
+        f.parentFile.mkdirs()
+        if (!f.exists() || f.text != text) f.text = text
+    }
+}
