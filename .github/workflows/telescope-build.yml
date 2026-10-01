@@ -23,8 +23,18 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 300
     steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/node_modules /opt/ghc /usr/local/.ghcup /usr/share/swift \
+            /usr/local/share/boost /opt/hostedtoolcache/CodeQL /opt/hostedtoolcache/go /opt/hostedtoolcache/PyPy \
+            /usr/local/share/powershell /usr/local/share/chromium /opt/microsoft /opt/google /usr/lib/jvm/*-8-* || true
+          for d in "$ANDROID_HOME"/ndk/*; do [ "$(basename "$d")" = 27.2.12479018 ] || sudo rm -rf "$d"; done
+          sudo docker image prune -af > /dev/null 2>&1 || true
+          df -h /
+
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -42,12 +52,21 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
             "ndk;27.2.12479018" "cmake;3.22.1" "build-tools;36.0.0" "platforms;android-36" > /dev/null
 
-      - name: Native build cache
-        uses: actions/cache@v4
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
         with:
-          path: TMessagesProj/.cxx
-          key: cxx-${{ hashFiles('TMessagesProj/jni/**') }}
-          restore-keys: cxx-
+          path: ~/.ccache
+          key: ccache-${{ github.run_id }}
+          restore-keys: ccache-
+
+      - name: Set up ccache
+        run: |
+          sudo apt-get install -y -qq ccache > /dev/null
+          ccache --set-config=cache_dir=$HOME/.ccache --set-config=max_size=6G --set-config=compression=true
+          ccache -z
+          # picked up by CMake as the default compiler launcher
+          echo "CMAKE_C_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
 
       - name: Secrets
         env:
@@ -63,6 +82,20 @@ jobs:
 
       - name: Build
         run: ./gradlew :TMessagesProj_App:assembleAfatRelease -PTELESCOPE_REVISION=${{ inputs.revision }} --no-daemon
+
+      - name: Build stats
+        if: always()
+        run: |
+          ccache -s || true
+          df -h /
+
+      # saved even when a later step fails, so a failed first build still warms the cache
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ github.run_id }}
 
       - name: Collect
         id: apk
