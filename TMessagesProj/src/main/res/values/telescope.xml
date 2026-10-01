@@ -2,4 +2,6 @@
 <!-- Telescope: fork-specific resources. Keep fork strings here, not in strings.xml, to avoid merge conflicts. -->
 <resources>
     <string name="telescope_account_type" translatable="false">com.hyv.telescope</string>
+    <string name="TelescopeUpdateTitle">Update Telescope</string>
+    <string name="TelescopeUpdateVersion">Version %1$s (%2$s)</string>
 </resources>
