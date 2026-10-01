@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Telescope: fork-specific resources. Keep fork strings here, not in strings.xml, to avoid merge conflicts. -->
+<!-- Telescope: fork-specific resources. Keep fork strings here, not in strings.xml, to avoid merge conflicts.
+     LocaleController only knows strings.xml (the build plugin packs them into an asset), so read
+     these with Context.getString(), never LocaleController.getString(). -->
 <resources>
     <string name="telescope_account_type" translatable="false">com.hyv.telescope</string>
     <string name="TelescopeUpdateTitle">Update Telescope</string>

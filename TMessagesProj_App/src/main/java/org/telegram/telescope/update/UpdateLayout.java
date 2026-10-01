@@ -88,7 +88,7 @@ public class UpdateLayout extends IUpdateLayout {
         updateTextView.setTextColor(0xffffffff);
         updateTextView.setGravity(Gravity.CENTER);
         updateLayout.addView(updateTextView, LayoutHelper.createFrameMatchParent());
-        updateTextView.setText(LocaleController.getString(R.string.TelescopeUpdateTitle), false);
+        updateTextView.setText(ApplicationLoader.applicationContext.getString(R.string.TelescopeUpdateTitle), false);
 
         updateLayoutIcon = new RadialProgress2(updateTextView);
         updateLayoutIcon.setColors(0xffffffff, 0xffffffff, Theme.getColor(Theme.key_featuredStickers_addButton), Theme.getColor(Theme.key_featuredStickers_addButton));
@@ -114,7 +114,7 @@ public class UpdateLayout extends IUpdateLayout {
                 setUpdateText(LocaleController.formatString(R.string.AppUpdateDownloading, (int) (progress * 100)), animated);
             } else {
                 updateLayoutIcon.setIcon(MediaActionDrawable.ICON_DOWNLOAD, true, animated);
-                setUpdateText(LocaleController.getString(R.string.TelescopeUpdateTitle), animated);
+                setUpdateText(ApplicationLoader.applicationContext.getString(R.string.TelescopeUpdateTitle), animated);
             }
             if (updateLayout.getTag() != null) {
                 return;
