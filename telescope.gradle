@@ -35,3 +35,8 @@ ext.telescopeWriteGoogleServices = { Project p, String packageName ->
         if (!f.exists() || f.text != text) f.text = text
     }
 }
+
+// Our own release counter on top of the upstream version (0-9), reset to 0 on every upstream update.
+// Becomes the last digit of versionCode; CI passes -PTELESCOPE_REVISION=n.
+ext.telescopeRevision = Integer.parseInt((project.findProperty("TELESCOPE_REVISION") ?: "0").toString())
+if (telescopeRevision < 0 || telescopeRevision > 9) throw new GradleException("TELESCOPE_REVISION must be 0-9")

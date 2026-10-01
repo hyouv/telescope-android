@@ -1,0 +1,70 @@
+# Telescope: daily check for a new upstream release ("update to X.Y.Z (N)" commits on DrKLO/Telegram master).
+# Merges it into `telescope`; on success starts a release build, on conflict opens an issue.
+name: Telescope sync upstream
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: telescope
+          fetch-depth: 0
+
+      - name: Fetch upstream
+        run: |
+          git remote add drklo https://github.com/DrKLO/Telegram.git
+          git fetch --no-tags drklo master
+          git push origin refs/remotes/drklo/master:refs/heads/upstream
+
+      - name: Find new release
+        id: check
+        run: |
+          # newest upstream release commit not yet merged into telescope
+          rel=$(git log --format='%H %s' drklo/master --not HEAD | grep -E ' [Uu]pdate to [0-9]' | head -1 || true)
+          if [ -z "$rel" ]; then echo "Nothing new"; exit 0; fi
+          echo "sha=${rel%% *}" >> "$GITHUB_OUTPUT"
+          echo "title=${rel#* }" >> "$GITHUB_OUTPUT"
+
+      - name: Merge
+        id: merge
+        if: steps.check.outputs.sha
+        run: |
+          git config user.name "telescope-bot"
+          git config user.email "telescope-bot@users.noreply.github.com"
+          if git merge --no-edit -m "Merge upstream: ${{ steps.check.outputs.title }}" ${{ steps.check.outputs.sha }}; then
+            git push origin HEAD:telescope
+            echo "ok=1" >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only --diff-filter=U > conflicts.txt
+            git merge --abort
+            echo "ok=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Start release build
+        if: steps.merge.outputs.ok == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run telescope-build.yml --ref telescope \
+            -f revision=0 -f release=true -f notes="Upstream: ${{ steps.check.outputs.title }}"
+
+      - name: Report conflict
+        if: steps.merge.outputs.ok == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Upstream merge conflict: ${{ steps.check.outputs.title }}"
+          if gh issue list --state open --search "$title in:title" --json number --jq '.[0].number' | grep -q .; then exit 0; fi
+          { echo "Merging \`${{ steps.check.outputs.sha }}\` into \`telescope\` failed. Conflicting files:"; echo; sed 's/^/- /' conflicts.txt; } > body.md
+          gh issue create --title "$title" --body-file body.md
