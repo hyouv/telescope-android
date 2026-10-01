@@ -40,7 +40,8 @@ jobs:
           sha=$(cut -d' ' -f1 "$apk.sha256")
           vc=$(echo "$apk" | sed -E 's/.*-([0-9]+)\.apk$/\1/')
           name=$(echo "$apk" | sed -E 's/^telescope-(.*)-[0-9]+\.apk$/\1/')
-          notes=$(grep -v '^versionCode:' ../body.md | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')
+          # release bodies edited on github.com use CRLF
+          notes=$(tr -d '\r' < ../body.md | grep -v '^versionCode:' | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')
           jq -n --arg v "$name" --argjson vc "$vc" --arg url "$BASE_URL/android/$apk" --arg sha "$sha" \
                 --argjson size "$(stat -c %s "$apk")" --arg notes "$notes" --arg date "$(date -u +%FT%TZ)" \
                 '{version:$v, version_code:$vc, file_url:$url, sha256:$sha, size:$size, changelog:$notes, date:$date}' > latest.json
