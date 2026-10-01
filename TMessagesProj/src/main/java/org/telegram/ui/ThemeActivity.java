@@ -656,7 +656,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             textSizeHeaderRow = rowCount++;
             textSizeRow = rowCount++;
             backgroundRow = rowCount++;
-            changeUserColor = rowCount++;
+            if (!org.telegram.telescope.Telescope.HIDE_PEER_COLORS) changeUserColor = rowCount++;
             newThemeInfoRow = rowCount++;
             themeHeaderRow = rowCount++;
 

@@ -4225,7 +4225,7 @@ public class StarsIntroActivity extends GradientHeaderActivity implements Notifi
                                     lastFragment.presentFragment(ChatActivity.of(did));
                                 }
                             }
-                        }, didUser != null && !UserObject.isDeleted(didUser) && !UserObject.areGiftsDisabled(did) ? getString(R.string.Gift2ButtonSendGift) : null, () -> {
+                        }, didUser != null && !UserObject.isDeleted(didUser) && !UserObject.areGiftsDisabled(did) && !org.telegram.telescope.Telescope.HIDE_GIFTS ? getString(R.string.Gift2ButtonSendGift) : null, () -> {
                             new GiftSheet(context, currentAccount, did, sheet[0]::dismiss).show();
                         });
                     }
@@ -4264,7 +4264,7 @@ public class StarsIntroActivity extends GradientHeaderActivity implements Notifi
                                 lastFragment.presentFragment(ChatActivity.of(did));
                             }
                         }
-                    }, didUser != null && !UserObject.isDeleted(didUser) && !UserObject.areGiftsDisabled(did) ? getString(R.string.Gift2ButtonSendGift) : null, () -> {
+                    }, didUser != null && !UserObject.isDeleted(didUser) && !UserObject.areGiftsDisabled(did) && !org.telegram.telescope.Telescope.HIDE_GIFTS ? getString(R.string.Gift2ButtonSendGift) : null, () -> {
                         new GiftSheet(context, currentAccount, did, sheet[0]::dismiss).show();
                     });
                 }

@@ -23,6 +23,12 @@ public final class Telescope {
     /** Hide the alternate launcher icon picker; only our own icon is shipped. */
     public static final boolean HIDE_APP_ICONS = true;
 
+    /** Remove every "send a gift" entry point (received gifts can still be viewed). */
+    public static final boolean HIDE_GIFTS = true;
+
+    /** Hide the name / profile color editor. */
+    public static final boolean HIDE_PEER_COLORS = true;
+
     private Telescope() {
     }
 

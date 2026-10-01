@@ -4683,7 +4683,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
 
             if (selfId != fromId || isForChannel) {
                 final TLRPC.User fromUser = MessagesController.getInstance(currentAccount).getUser(fromId);
-                tableView.addRowUser(getString(R.string.Gift2From), currentAccount, fromId, () -> openProfile(fromId), fromId != selfId && fromId != UserObject.ANONYMOUS && !fromBot && !UserObject.isDeleted(fromUser) && !isForChannel ? getString(R.string.Gift2ButtonSendGift) : null, () -> {
+                tableView.addRowUser(getString(R.string.Gift2From), currentAccount, fromId, () -> openProfile(fromId), fromId != selfId && fromId != UserObject.ANONYMOUS && !fromBot && !UserObject.isDeleted(fromUser) && !isForChannel && !org.telegram.telescope.Telescope.HIDE_GIFTS ? getString(R.string.Gift2ButtonSendGift) : null, () -> {
                     new GiftSheet(getContext(), currentAccount, fromId, this::dismiss).show();
                 });
             }
@@ -5031,7 +5031,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 });
             } else {
                 if (fromId != selfId || prepaid_upgrade || isForChannel) {
-                    tableView.addRowUser(getString(R.string.Gift2From), currentAccount, fromId, () -> openProfile(fromId), fromId != selfId && fromId != UserObject.ANONYMOUS && !UserObject.isDeleted(fromUser) && !fromBot && !isForChannel ? getString(R.string.Gift2ButtonSendGift) : null, isForChannel ? null : () -> {
+                    tableView.addRowUser(getString(R.string.Gift2From), currentAccount, fromId, () -> openProfile(fromId), fromId != selfId && fromId != UserObject.ANONYMOUS && !UserObject.isDeleted(fromUser) && !fromBot && !isForChannel && !org.telegram.telescope.Telescope.HIDE_GIFTS ? getString(R.string.Gift2ButtonSendGift) : null, isForChannel ? null : () -> {
                         new GiftSheet(getContext(), currentAccount, fromId, this::dismiss).show();
                     });
                 }

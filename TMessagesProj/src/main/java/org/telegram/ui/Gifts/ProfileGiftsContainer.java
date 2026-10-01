@@ -1522,6 +1522,7 @@ public class ProfileGiftsContainer extends FrameLayout implements NotificationCe
     }
 
     private boolean shouldHideButton(int page) {
+        if (org.telegram.telescope.Telescope.HIDE_GIFTS && (page == 0 || !collections.isMine())) return true;
         if (page == 0) return false;
         final int index = page - 1;
         if (index < 0 || index >= collections.getCollections().size()) return true;
