@@ -24,7 +24,7 @@ public final class Telescope {
     /** Hide the alternate launcher icon picker; only our own icon is shipped. */
     public static final boolean HIDE_APP_ICONS = true;
 
-    /** Remove every "send a gift" entry point (received gifts can still be viewed). */
+    /** Remove every "send a gift" entry point. */
     public static final boolean HIDE_GIFTS = true;
 
     /** Hide the name / profile color editor. */
@@ -50,6 +50,21 @@ public final class Telescope {
 
     /** Hide the "Invite friends" entry in contacts. */
     public static final boolean HIDE_INVITE_FRIENDS = true;
+
+    /** Hide "Apply for me and <peer>" when setting a chat wallpaper; wallpapers are only set for yourself. */
+    public static final boolean HIDE_WALLPAPER_FOR_BOTH = true;
+
+    /** Never ask for contacts access on our own (startup, contacts tab, the "!" badge). Sharing a contact still asks. */
+    public static final boolean HIDE_CONTACTS_PROMPT = true;
+
+    /** Hide the gifts tab on user / channel profiles and the gifts floating around the profile photo. */
+    public static final boolean HIDE_PROFILE_GIFTS = true;
+
+    /** Drop emoji statuses (including collectible ones) from users and channels, so none show next to names. */
+    public static final boolean HIDE_EMOJI_STATUS = true;
+
+    /** Hide folder tags in the chat list and the folder color setting. */
+    public static final boolean HIDE_FOLDER_TAGS = true;
 
     private Telescope() {
     }

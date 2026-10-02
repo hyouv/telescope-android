@@ -1764,7 +1764,7 @@ public class MessagesController extends BaseController implements NotificationCe
         savedDialogsPinnedLimitPremium = mainPreferences.getInt("savedDialogsPinnedLimitPremium", 6);
         storyQualityFull = mainPreferences.getBoolean("storyQualityFull", true);
         savedViewAsChats = mainPreferences.getBoolean("savedViewAsChats", false);
-        folderTags = mainPreferences.getBoolean("folderTags", false);
+        folderTags = !org.telegram.telescope.Telescope.HIDE_FOLDER_TAGS && mainPreferences.getBoolean("folderTags", false);
         uploadPremiumSpeedupUpload = mainPreferences.getFloat("uploadPremiumSpeedupUpload", 10.0f);
         uploadPremiumSpeedupDownload = mainPreferences.getFloat("uploadPremiumSpeedupDownload", 10.0f);
         uploadPremiumSpeedupNotifyPeriod = mainPreferences.getInt("uploadPremiumSpeedupNotifyPeriod2", 3600);
@@ -2456,7 +2456,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 });
             } else if (response instanceof TLRPC.TL_messages_dialogFilters) {
                 TLRPC.TL_messages_dialogFilters res = (TLRPC.TL_messages_dialogFilters) response;
-                if (folderTags != res.tags_enabled) {
+                if (!org.telegram.telescope.Telescope.HIDE_FOLDER_TAGS && folderTags != res.tags_enabled) {
                     setFolderTags(res.tags_enabled);
                     AndroidUtilities.runOnUIThread(() -> {
                         getNotificationCenter().postNotificationName(NotificationCenter.dialogFiltersUpdated);
@@ -6859,6 +6859,7 @@ public class MessagesController extends BaseController implements NotificationCe
         if (user == null) {
             return false;
         }
+        if (org.telegram.telescope.Telescope.HIDE_EMOJI_STATUS) user.emoji_status = null;
         fromCache = fromCache && user.id / 1000 != 333 && user.id != 777000;
         TLRPC.User oldUser = users.get(user.id);
         if (oldUser == user && !force) {
@@ -6994,6 +6995,7 @@ public class MessagesController extends BaseController implements NotificationCe
         if (chat == null) {
             return;
         }
+        if (org.telegram.telescope.Telescope.HIDE_EMOJI_STATUS) chat.emoji_status = null;
         TLRPC.Chat oldChat = chats.get(chat.id);
         if (oldChat == chat) {
             return;
@@ -19942,14 +19944,14 @@ public class MessagesController extends BaseController implements NotificationCe
 
                         if (currentUser != null) {
                             currentUser.id = update.user_id;
-                            currentUser.emoji_status = update.emoji_status;
+                            currentUser.emoji_status = org.telegram.telescope.Telescope.HIDE_EMOJI_STATUS ? null : update.emoji_status;
                             if (UserObject.isUserSelf(currentUser)) {
                                 getNotificationCenter().postNotificationName(NotificationCenter.userEmojiStatusUpdated, currentUser);
                             }
                         }
                         TLRPC.User toDbUser = new TLRPC.TL_user();
                         toDbUser.id = update.user_id;
-                        toDbUser.emoji_status = update.emoji_status;
+                        toDbUser.emoji_status = org.telegram.telescope.Telescope.HIDE_EMOJI_STATUS ? null : update.emoji_status;
                         dbUsers.add(toDbUser);
                     } else if (baseUpdate instanceof TL_update.TL_updateUserName) {
                         TL_update.TL_updateUserName update = (TL_update.TL_updateUserName) baseUpdate;

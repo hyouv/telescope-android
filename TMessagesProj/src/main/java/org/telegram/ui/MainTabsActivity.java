@@ -284,7 +284,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             if (hasPermission) {
                 MessagesController.getGlobalNotificationsSettings().edit().putBoolean("askAboutContacts2", true).apply();
             }
-            if (Build.VERSION.SDK_INT >= 23 && UserConfig.getInstance(currentAccount).syncContacts && !hasPermission && MessagesController.getGlobalNotificationsSettings().getBoolean("askAboutContacts2", true)) {
+            if (!org.telegram.telescope.Telescope.HIDE_CONTACTS_PROMPT && Build.VERSION.SDK_INT >= 23 && UserConfig.getInstance(currentAccount).syncContacts && !hasPermission && MessagesController.getGlobalNotificationsSettings().getBoolean("askAboutContacts2", true)) {
                 tabs[INDEX_CONTACTS].setCounter("!", true, true);
             } else {
                 tabs[INDEX_CONTACTS].setCounter(null, true, true);

@@ -1459,7 +1459,7 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
                 updateApplyButton1(false);
                 applyButton1.setOnClickListener(view -> applyWallpaperBackground(false));
 
-                if (dialogId > 0 && !self && serverWallpaper == null) {
+                if (!org.telegram.telescope.Telescope.HIDE_WALLPAPER_FOR_BOTH && dialogId > 0 && !self && serverWallpaper == null) {
                     applyButton2 = new BlurButton(context);
                     ScaleStateListAnimator.apply(applyButton2, 0.033f, 1.2f);
                     TLRPC.User user = getMessagesController().getUser(dialogId);
