@@ -45,7 +45,7 @@ public class StatusBadgeComponent {
         } else if (user != null && DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0) {
             statusDrawable.set(DialogObject.getEmojiStatusDocumentId(user.emoji_status), animated);
             statusDrawable.setColor(colorFilter);
-        } else if (user != null && user.premium) {
+        } else if (!org.telegram.telescope.Telescope.HIDE_PREMIUM_BADGE && user != null && user.premium) {
             statusDrawable.set(PremiumGradient.getInstance().premiumStarDrawableMini, animated);
             statusDrawable.setColor(colorFilter);
         } else {

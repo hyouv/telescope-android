@@ -483,7 +483,7 @@ public class GroupCallUserCell extends FrameLayout {
                 rightDrawable.set(verifiedDrawable = (verifiedDrawable == null ? new VerifiedDrawable(getContext()) : verifiedDrawable), animated);
             } else if (currentUser != null && DialogObject.getEmojiStatusDocumentId(currentUser.emoji_status) != 0) {
                 rightDrawable.set(DialogObject.getEmojiStatusDocumentId(currentUser.emoji_status), animated);
-            } else if (currentUser != null && currentUser.premium) {
+            } else if (!org.telegram.telescope.Telescope.HIDE_PREMIUM_BADGE && currentUser != null && currentUser.premium) {
                 if (premiumDrawable == null) {
                     premiumDrawable = getContext().getResources().getDrawable(R.drawable.msg_premium_liststar).mutate();
                     premiumDrawable = new AnimatedEmojiDrawable.WrapSizeDrawable(premiumDrawable, AndroidUtilities.dp(14), AndroidUtilities.dp(14)) {

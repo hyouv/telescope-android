@@ -231,7 +231,7 @@ public class TableView extends TableLayout {
             if (did > 0) {
                 TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(did);
                 emoji_status = user != null ? user.emoji_status : null;
-                isPremium = user != null && user.premium;
+                isPremium = !org.telegram.telescope.Telescope.HIDE_PREMIUM_BADGE && user != null && user.premium;
             } else {
                 TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-did);
                 emoji_status = chat != null ? chat.emoji_status : null;

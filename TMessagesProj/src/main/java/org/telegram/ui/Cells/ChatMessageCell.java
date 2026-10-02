@@ -19793,7 +19793,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     nameStatusSlug = ((TLRPC.TL_emojiStatusCollectible) currentUser.emoji_status).slug;
                 }
                 return emojiStatusId;
-            } else if (currentUser.premium) {
+            } else if (!org.telegram.telescope.Telescope.HIDE_PREMIUM_BADGE && currentUser.premium) {
                 return ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.msg_premium_liststar).mutate();
             }
         } else if (currentChat != null) {
