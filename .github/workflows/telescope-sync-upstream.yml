@@ -36,6 +36,8 @@ jobs:
           echo "sha=${rel%% *}" >> "$GITHUB_OUTPUT"
           echo "title=${rel#* }" >> "$GITHUB_OUTPUT"
 
+      # Outputs are words, not 0/1: when this step is skipped its output is empty,
+      # and Actions coerces empty == '0' to true, which ran the conflict report.
       - name: Merge
         id: merge
         if: steps.check.outputs.sha
@@ -44,15 +46,15 @@ jobs:
           git config user.email "telescope-bot@users.noreply.github.com"
           if git merge --no-edit -m "Merge upstream: ${{ steps.check.outputs.title }}" ${{ steps.check.outputs.sha }}; then
             git push origin HEAD:telescope
-            echo "ok=1" >> "$GITHUB_OUTPUT"
+            echo "result=merged" >> "$GITHUB_OUTPUT"
           else
             git diff --name-only --diff-filter=U > conflicts.txt
             git merge --abort
-            echo "ok=0" >> "$GITHUB_OUTPUT"
+            echo "result=conflict" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Start release build
-        if: steps.merge.outputs.ok == '1'
+        if: steps.merge.outputs.result == 'merged'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -60,7 +62,7 @@ jobs:
             -f revision=0 -f release=true -f notes="Upstream: ${{ steps.check.outputs.title }}"
 
       - name: Report conflict
-        if: steps.merge.outputs.ok == '0'
+        if: steps.merge.outputs.result == 'conflict'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
