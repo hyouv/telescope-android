@@ -2274,7 +2274,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
             @Override
             public int getBottomOffset(int tag) {
-                if (bottomButtonsContainer == null) {
+                if (bottomButtonsContainer == null || org.telegram.telescope.Telescope.HIDE_STORIES) {
                     return navigationBarHeight + additionFloatingButtonOffset;
                 }
                 final float stories = sharedMediaLayout.getTabVisibility(SharedMediaLayout.TAB_STORIES, true);
@@ -2285,7 +2285,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
             @Override
             public boolean bottomOffsetAnimated() {
-                return bottomButtonsContainer == null;
+                return bottomButtonsContainer == null || org.telegram.telescope.Telescope.HIDE_STORIES;
             }
         });
 
@@ -5915,6 +5915,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         createBirthdayEffect();
         if (myProfile) {
             contentView.addView(bottomButtonsContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 60, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL));
+            if (org.telegram.telescope.Telescope.HIDE_STORIES) bottomButtonsContainer.setVisibility(View.GONE);
         }
 
         if (actionsView != null && actionsView.hasCall()) {
@@ -6050,6 +6051,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
     private void updateBottomButtonY() {
         if (bottomButtonsContainer == null) {
+            return;
+        }
+        if (org.telegram.telescope.Telescope.HIDE_STORIES) {
+            bottomButtonsContainer.setVisibility(View.GONE);
             return;
         }
 
