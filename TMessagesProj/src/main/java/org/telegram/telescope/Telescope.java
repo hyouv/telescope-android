@@ -63,7 +63,7 @@ public final class Telescope {
     /** Drop emoji statuses (including collectible ones) from users and channels, so none show next to names. */
     public static final boolean HIDE_EMOJI_STATUS = true;
 
-    /** Hide the Premium star after other users' names, so Premium users look the same as everyone else. */
+    /** Hide the Premium star after names (other users' and your own), so Premium users look the same as everyone else. */
     public static final boolean HIDE_PREMIUM_BADGE = true;
 
     /** Hide folder tags in the chat list and the folder color setting. */
