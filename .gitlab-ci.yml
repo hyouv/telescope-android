@@ -1,0 +1,214 @@
+# Telescope: GitLab CI. Builds a signed release APK and publishes it to Cloudflare R2
+# (dl.hyv.moe/android), and once a day merges new upstream releases from DrKLO/Telegram.
+#
+# Release: Build > Pipelines > Run pipeline on `telescope`. REVISION "auto" continues the
+# revision count of the current upstream version (0 after an upstream update).
+# Upstream sync: a pipeline schedule with TELESCOPE_TASK=sync; it merges a new upstream
+# release and starts a release pipeline, or opens an issue on conflicts.
+#
+# CI/CD variables (protected; `telescope` is a protected branch):
+#   TELESCOPE_PROPERTIES     file    API id/hash and keystore passwords (secrets/telescope.properties)
+#   TELESCOPE_KEYSTORE_B64   masked  base64 of the release keystore
+#   GOOGLE_SERVICES_JSON     file    optional, real Firebase config (push notifications)
+#   CLOUDFLARE_API_TOKEN     masked  R2 write access to the telescope-dl bucket
+#   CLOUDFLARE_ACCOUNT_ID
+#   TELESCOPE_BOT_TOKEN      masked  project access token (write_repository, api) for the sync job
+#
+# The .github/ workflows are the old GitHub CI and are not used here.
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $TELESCOPE_TASK == "sync"
+    - if: $CI_COMMIT_BRANCH == "telescope" && $CI_PIPELINE_SOURCE =~ /^(web|api|trigger)$/
+    # plain pushes don't build: releases are started by hand or by the sync job
+
+variables:
+  REVISION:
+    value: "auto"
+    description: "Telescope revision on top of the upstream version (0-9), or auto"
+  NOTES:
+    value: ""
+    description: "Release notes"
+  BUCKET: telescope-dl
+  BASE_URL: https://dl.hyv.moe
+
+default:
+  tags: [emori]
+
+stages: [sync, build, publish]
+
+build:
+  stage: build
+  image: eclipse-temurin:17-jdk-jammy
+  rules:
+    - if: $TELESCOPE_TASK != "sync"
+  resource_group: telescope-release
+  timeout: 4h
+  variables:
+    GIT_DEPTH: "1"
+    GIT_SUBMODULE_STRATEGY: recursive
+    ANDROID_HOME: $CI_PROJECT_DIR/.cache/android-sdk
+    GRADLE_USER_HOME: $CI_PROJECT_DIR/.cache/gradle
+    CCACHE_DIR: $CI_PROJECT_DIR/.cache/ccache
+    CCACHE_MAXSIZE: 8G
+    CCACHE_COMPRESS: "true"
+    CMAKE_C_COMPILER_LAUNCHER: ccache
+    CMAKE_CXX_COMPILER_LAUNCHER: ccache
+    CMDLINE_TOOLS: commandlinetools-linux-13114758_latest.zip
+  cache:
+    - key: android-sdk-v1
+      paths: [.cache/android-sdk]
+    - key: gradle-v1
+      paths: [.cache/gradle/caches, .cache/gradle/wrapper]
+    - key: ccache-v1
+      paths: [.cache/ccache]
+  script:
+    - nproc; free -h; df -h "$CI_PROJECT_DIR" | tail -1
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends ccache unzip jq curl > /dev/null
+    - |
+      # SDK packages, kept in the runner cache; follows whatever NDK upstream pins
+      NDK_VERSION=$(grep -oP 'ndkVersion "\K[^"]+' TMessagesProj/build.gradle); test -n "$NDK_VERSION"
+      export CCACHE_COMPILERCHECK="string:ndk-$NDK_VERSION"  # sdkmanager stamps the NDK with its install time
+      sdkm="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+      if [ ! -x "$sdkm" ]; then
+        mkdir -p "$ANDROID_HOME/cmdline-tools"
+        curl -fsSL -o /tmp/tools.zip "https://dl.google.com/android/repository/$CMDLINE_TOOLS"
+        unzip -q /tmp/tools.zip -d /tmp/tools && mv /tmp/tools/cmdline-tools "$ANDROID_HOME/cmdline-tools/latest"
+      fi
+      yes | "$sdkm" --licenses > /dev/null || true
+      "$sdkm" "ndk;$NDK_VERSION" "cmake;3.22.1" "build-tools;36.0.0" "platforms;android-36" > /dev/null
+      ccache -z
+    - |
+      # secrets, outside the project dir so they can never end up in artifacts or caches
+      d=/tmp/telescope-secrets; mkdir -p "$d"
+      cp "$TELESCOPE_PROPERTIES" "$d/telescope.properties"
+      printf '%s' "$TELESCOPE_KEYSTORE_B64" | base64 -d > "$d/telescope-release.jks"
+      if [ -n "$GOOGLE_SERVICES_JSON" ]; then cp "$GOOGLE_SERVICES_JSON" "$d/google-services.json"; fi
+      export TELESCOPE_SECRETS="$d/telescope.properties"
+    - |
+      # revision: "auto" continues from what dl.hyv.moe serves for this upstream version
+      name=$(grep '^APP_VERSION_NAME=' gradle.properties | cut -d= -f2)
+      code=$(grep '^APP_VERSION_CODE=' gradle.properties | cut -d= -f2)
+      base=$(( (code * 10 + 9) * 10 ))
+      current=$(curl -fsS "$BASE_URL/android/latest.json?$RANDOM" | jq -r .version_code)
+      rev=$REVISION
+      if [ "$rev" = auto ]; then
+        if [ "$current" -ge "$base" ] && [ "$current" -lt $(( base + 10 )) ]; then rev=$(( current - base + 1 )); else rev=0; fi
+      fi
+      [[ "$rev" =~ ^[0-9]$ ]] || { echo "revision must be 0-9, got $rev"; exit 1; }
+      vc=$(( base + rev ))
+      [ "$vc" -gt "$current" ] || { echo "versionCode $vc is not newer than the published $current"; exit 1; }
+      tag="android-v${name}-${code}"; [ "$rev" != 0 ] && tag="${tag}.${rev}"
+      echo "Telescope $name, revision $rev, versionCode $vc (published: $current)"
+      printf 'REVISION=%s\nVERSION_NAME=%s\nVERSION_CODE=%s\nTAG=%s\nAPK=telescope-%s-%s.apk\n' \
+        "$rev" "$name" "$vc" "$tag" "$name" "$vc" > release.env
+      . ./release.env
+    # native code first, so its ccache is filled even if the Java/R8 part fails later
+    - ./gradlew :TMessagesProj:externalNativeBuildRelease --no-daemon -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
+    - ccache -s | grep -iE "hits|misses|size" || true
+    - ./gradlew :TMessagesProj_App:assembleAfatRelease -PTELESCOPE_REVISION=$REVISION --no-daemon -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g" -Dorg.gradle.parallel=false
+    - |
+      mkdir -p out && cp TMessagesProj_App/build/outputs/apk/afat/release/app.apk "out/$APK"
+      (cd out && sha256sum "$APK" > "$APK.sha256")
+      aapt="$ANDROID_HOME/build-tools/36.0.0/aapt2"
+      badging=$("$aapt" dump badging "out/$APK")  # not piped into head: pipefail would trip on SIGPIPE
+      printf '%s\n' "$badging" | sed -n 1p
+      case "$badging" in *"versionCode='$VERSION_CODE'"*) ;; *) echo "versionCode mismatch"; exit 1;; esac
+      printf '%s\n' "${NOTES:-Telescope $VERSION_NAME}" > out/notes.md
+  after_script:
+    - rm -rf /tmp/telescope-secrets
+  artifacts:
+    paths: [out/]
+    reports:
+      dotenv: release.env
+    expire_in: 30 days
+
+publish:
+  stage: publish
+  image: node:22-bookworm-slim
+  needs: [build]
+  rules:
+    - if: $TELESCOPE_TASK != "sync"
+  resource_group: telescope-release
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends jq curl ca-certificates > /dev/null
+    - |
+      cd out && sha256sum -c "$APK.sha256"
+      # someone may have published in the meantime
+      current=$(curl -fsS "$BASE_URL/android/latest.json?$RANDOM" | jq -r .version_code)
+      [ "$VERSION_CODE" -gt "$current" ] || { echo "versionCode $VERSION_CODE is not newer than the published $current"; exit 1; }
+      jq -n --arg v "$VERSION_NAME" --argjson vc "$VERSION_CODE" --arg url "$BASE_URL/android/$APK" \
+            --arg sha "$(cut -d' ' -f1 "$APK.sha256")" --argjson size "$(stat -c %s "$APK")" \
+            --arg notes "$(cat notes.md)" --arg date "$(date -u +%FT%TZ)" \
+            '{version:$v, version_code:$vc, file_url:$url, sha256:$sha, size:$size, changelog:$notes, date:$date}' > latest.json
+      cat latest.json
+    - |
+      cd out
+      w="npx -y wrangler@4 r2 object put"
+      $w "$BUCKET/android/$APK" --file "$APK" --remote \
+         --content-type application/vnd.android.package-archive --cache-control "public, max-age=31536000, immutable"
+      $w "$BUCKET/android/Telescope.apk" --file "$APK" --remote \
+         --content-type application/vnd.android.package-archive --cache-control "public, max-age=300" \
+         --content-disposition 'attachment; filename="Telescope.apk"'
+      # metadata last, so clients never see a version whose APK isn't there yet
+      $w "$BUCKET/android/latest.json" --file latest.json --remote --content-type application/json --cache-control "no-cache"
+      sleep 5
+      curl -fsS "$BASE_URL/android/latest.json?$RANDOM" | jq -e --argjson vc "$VERSION_CODE" '.version_code == $vc'
+      curl -fsSI "$BASE_URL/android/$APK" | grep -iE '^(HTTP|content-length)'
+    - |
+      # GitLab release: the APK goes to the generic package registry, the release links to it
+      cd out
+      pkg="$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/telescope-android/$VERSION_CODE"
+      for f in "$APK" "$APK.sha256"; do
+        curl -fsS -H "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file "$f" "$pkg/$f" > /dev/null
+      done
+      jq -n --arg tag "$TAG" --arg ref "$CI_COMMIT_SHA" --arg name "Telescope Android $VERSION_NAME ($VERSION_CODE)" \
+            --arg desc "$(cat notes.md; printf '\nversionCode: %s\n' "$VERSION_CODE")" \
+            --arg apk "$pkg/$APK" --arg sha "$pkg/$APK.sha256" --arg apkname "$APK" \
+            '{tag_name:$tag, ref:$ref, name:$name, description:$desc,
+              assets:{links:[{name:$apkname, url:$apk, link_type:"package"}, {name:($apkname+".sha256"), url:$sha, link_type:"other"}]}}' > release.json
+      curl -fsS -H "JOB-TOKEN: $CI_JOB_TOKEN" -H "Content-Type: application/json" \
+           --data @release.json "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases" | jq -r '._links.self'
+
+# Daily: merge the newest upstream release ("Update to X.Y.Z (N)" commits on DrKLO/Telegram master).
+sync-upstream:
+  stage: sync
+  image: alpine:3.22
+  rules:
+    - if: $TELESCOPE_TASK == "sync"
+  resource_group: telescope-sync
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - apk add --no-cache git curl jq > /dev/null
+    - |
+      push_url="https://oauth2:${TELESCOPE_BOT_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/${CI_PROJECT_PATH}.git"
+      api() { curl -fsS -H "PRIVATE-TOKEN: $TELESCOPE_BOT_TOKEN" "$@"; }
+      git config user.name "telescope-bot"; git config user.email "telescope-bot@noreply.gl.emoriko.com"
+      git checkout -B telescope "origin/telescope"
+      git fetch --no-tags https://github.com/DrKLO/Telegram.git master
+      git push -q "$push_url" FETCH_HEAD:refs/heads/upstream
+      # newest upstream release commit not yet merged into telescope
+      rel=$(git log --format='%H %s' FETCH_HEAD --not HEAD | grep -E ' [Uu]pdate to [0-9]' | head -1 || true)
+      if [ -z "$rel" ]; then echo "Nothing new upstream"; exit 0; fi
+      sha=${rel%% *}; title=${rel#* }
+      echo "New upstream release: $title ($sha)"
+      if git merge --no-edit -m "Merge upstream: $title" "$sha"; then
+        git push -q "$push_url" HEAD:telescope
+        jq -n --arg notes "Upstream: $title" \
+          '{ref:"telescope", variables:[{key:"REVISION", value:"0"}, {key:"NOTES", value:$notes}]}' > p.json
+        api -H "Content-Type: application/json" --data @p.json "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipeline" | jq -r .web_url
+      else
+        conflicts=$(git diff --name-only --diff-filter=U); git merge --abort
+        issue="Upstream merge conflict: $title"
+        open=$(api -G "$CI_API_V4_URL/projects/$CI_PROJECT_ID/issues" --data-urlencode "state=opened" \
+               --data-urlencode "search=$issue" --data-urlencode "in=title" | jq length)
+        if [ "$open" = 0 ]; then
+          body=$(printf 'Merging `%s` into `telescope` failed. Conflicting files:\n\n%s\n' "$sha" "$(printf '%s\n' "$conflicts" | sed 's/^/- /')")
+          api --data-urlencode "title=$issue" --data-urlencode "description=$body" \
+              "$CI_API_V4_URL/projects/$CI_PROJECT_ID/issues" | jq -r .web_url
+        fi
+        echo "Merge conflict in:"; printf '%s\n' "$conflicts"; exit 1
+      fi
