@@ -14,6 +14,11 @@
 #   CLOUDFLARE_ACCOUNT_ID
 #   TELESCOPE_BOT_TOKEN      masked  project access token (write_repository, api) for the sync job
 #
+# Check secrets: Run pipeline with TELESCOPE_TASK=check (signing key and R2 access, values not printed).
+#
+# The runner is in mainland China: distro packages, the Android SDK, Gradle, Maven and npm all
+# come from domestic mirrors. Only GitHub (submodules, DrKLO/Telegram) is fetched directly.
+#
 # The .github/ workflows are the old GitHub CI and are not used here.
 
 workflow:
@@ -31,17 +36,33 @@ variables:
     description: "Release notes"
   BUCKET: telescope-dl
   BASE_URL: https://dl.hyv.moe
+  # mirrors
+  ANDROID_MIRROR: https://mirrors.cloud.tencent.com/AndroidSDK/
+  SDK_TEST_BASE_URL: $ANDROID_MIRROR  # sdkmanager downloads from here instead of dl.google.com
+  GRADLE_MIRROR: https://mirrors.cloud.tencent.com/gradle/
+  NPM_CONFIG_REGISTRY: https://registry.npmmirror.com
 
 default:
   tags: [emori]
+  before_script:
+    - |
+      # distro packages from Aliyun (apt checks signatures, so plain http works in slim images without CA certs)
+      [ -f /etc/apk/repositories ] && sed -i 's#dl-cdn.alpinelinux.org#mirrors.aliyun.com#' /etc/apk/repositories
+      [ -f /etc/apt/sources.list.d/debian.sources ] && sed -i 's#http://deb.debian.org#http://mirrors.aliyun.com#g' /etc/apt/sources.list.d/debian.sources
+      [ -f /etc/apt/sources.list ] && sed -i -E 's#http://(archive|security)\.ubuntu\.com#http://mirrors.aliyun.com#g' /etc/apt/sources.list
+      true
 
-stages: [sync, build, publish]
+stages: [check, sync, build, publish]
+
+.release-rules: &release-rules
+  - if: $TELESCOPE_TASK
+    when: never
+  - when: on_success
 
 build:
   stage: build
   image: eclipse-temurin:17-jdk-jammy
-  rules:
-    - if: $TELESCOPE_TASK != "sync"
+  rules: *release-rules
   resource_group: telescope-release
   timeout: 4h
   variables:
@@ -72,8 +93,7 @@ build:
       sdkm="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
       if [ ! -x "$sdkm" ]; then
         mkdir -p "$ANDROID_HOME/cmdline-tools"
-        # the runner's connection to dl.google.com drops now and then
-        curl -fsSL --retry 8 --retry-all-errors --retry-delay 5 -o /tmp/tools.zip "https://dl.google.com/android/repository/$CMDLINE_TOOLS"
+        curl -fsSL --retry 8 --retry-all-errors --retry-delay 5 -o /tmp/tools.zip "$ANDROID_MIRROR$CMDLINE_TOOLS"
         unzip -q /tmp/tools.zip -d /tmp/tools && mv /tmp/tools/cmdline-tools "$ANDROID_HOME/cmdline-tools/latest"
       fi
       yes | "$sdkm" --licenses > /dev/null || true
@@ -82,6 +102,39 @@ build:
         tail -3 /tmp/sdkm.log; [ $i = 5 ] && exit 1; echo "sdkmanager failed, retrying"; sleep 10
       done
       ccache -z
+    - |
+      # Gradle distribution and Maven repositories from mirrors (CI working copy only, not committed)
+      sed -i -E "s#^distributionUrl=.*/(gradle-[^/]+\.zip)\$#distributionUrl=${GRADLE_MIRROR}\1#" gradle/wrapper/gradle-wrapper.properties
+      grep distributionUrl gradle/wrapper/gradle-wrapper.properties
+      mkdir -p "$GRADLE_USER_HOME/init.d"
+      cat > "$GRADLE_USER_HOME/init.d/telescope-mirrors.gradle" <<'GRADLE'
+      def mirrors = [
+          'https://repo.maven.apache.org/maven2': 'https://maven.aliyun.com/repository/central',
+          'https://repo1.maven.org/maven2': 'https://maven.aliyun.com/repository/central',
+          'https://dl.google.com/dl/android/maven2': 'https://maven.aliyun.com/repository/google',
+          'https://maven.google.com': 'https://maven.aliyun.com/repository/google',
+          'https://plugins.gradle.org/m2': 'https://maven.aliyun.com/repository/gradle-plugin',
+      ]
+      def remap = { RepositoryHandler repos ->
+          repos.configureEach { r ->
+              if (r instanceof MavenArtifactRepository) {
+                  def m = mirrors[r.url.toString().replaceAll('/+$', '')]
+                  if (m) r.url = m
+              }
+          }
+      }
+      beforeSettings { s ->
+          remap(s.pluginManagement.repositories)
+          remap(s.dependencyResolutionManagement.repositories)
+          // plugins resolve from the portal by default, which isn't in the list yet
+          s.pluginManagement.repositories.maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+          s.pluginManagement.repositories.gradlePluginPortal()
+      }
+      allprojects {
+          remap(buildscript.repositories)
+          remap(repositories)
+      }
+      GRADLE
     - |
       # secrets, outside the project dir so they can never end up in artifacts or caches
       d=/tmp/telescope-secrets; mkdir -p "$d"
@@ -131,8 +184,7 @@ publish:
   stage: publish
   image: node:22-bookworm-slim
   needs: [build]
-  rules:
-    - if: $TELESCOPE_TASK != "sync"
+  rules: *release-rules
   resource_group: telescope-release
   variables:
     GIT_STRATEGY: none
@@ -216,3 +268,49 @@ sync-upstream:
         fi
         echo "Merge conflict in:"; printf '%s\n' "$conflicts"; exit 1
       fi
+
+# Run pipeline with TELESCOPE_TASK=check: verifies the secrets without printing them.
+check-signing:
+  stage: check
+  image: eclipse-temurin:17-jdk-jammy
+  rules:
+    - if: $TELESCOPE_TASK == "check"
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - |
+      prop() { grep "^$1=" "$TELESCOPE_PROPERTIES" | cut -d= -f2- | tr -d '\r'; }
+      fail=0
+      for k in TELESCOPE_API_ID TELESCOPE_API_HASH TELESCOPE_STORE_PASSWORD TELESCOPE_KEY_ALIAS TELESCOPE_KEY_PASSWORD; do
+        [ -n "$(prop $k)" ] && echo "$k: set" || { echo "$k: MISSING"; fail=1; }
+      done
+      [[ "$(prop TELESCOPE_API_ID)" =~ ^[0-9]+$ ]] || { echo "TELESCOPE_API_ID is not a number"; fail=1; }
+      [[ "$(prop TELESCOPE_API_HASH)" =~ ^[0-9a-f]{32}$ ]] || { echo "TELESCOPE_API_HASH is not 32 hex characters"; fail=1; }
+      printf '%s' "$TELESCOPE_KEYSTORE_B64" | base64 -d > /tmp/ks
+      if keytool -list -keystore /tmp/ks -storepass "$(prop TELESCOPE_STORE_PASSWORD)" -alias "$(prop TELESCOPE_KEY_ALIAS)" > /tmp/ks.txt 2>&1; then
+        echo "keystore: opens, alias found"; grep -E "fingerprint|SHA-256|SHA256" /tmp/ks.txt | head -1
+      else
+        echo "keystore: can't open it or the alias is missing"; fail=1
+      fi
+      rm -f /tmp/ks /tmp/ks.txt
+      exit $fail
+
+check-r2:
+  stage: check
+  image: node:22-bookworm-slim
+  rules:
+    - if: $TELESCOPE_TASK == "check"
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates > /dev/null
+    - |
+      [[ "$CLOUDFLARE_ACCOUNT_ID" =~ ^[0-9a-f]{32}$ ]] && echo "CLOUDFLARE_ACCOUNT_ID: ok" || { echo "CLOUDFLARE_ACCOUNT_ID is not 32 hex characters"; exit 1; }
+      [ -n "$CLOUDFLARE_API_TOKEN" ] || { echo "CLOUDFLARE_API_TOKEN is empty"; exit 1; }
+      stamp=$(date -u +%FT%TZ)-$RANDOM; echo "$stamp" > ping.txt
+      w="npx -y wrangler@4 r2 object"
+      $w put "$BUCKET/android/ci-ping.txt" --file ping.txt --remote --cache-control no-cache > /dev/null
+      sleep 3
+      got=$(curl -fsS "$BASE_URL/android/ci-ping.txt?$RANDOM")
+      $w delete "$BUCKET/android/ci-ping.txt" --remote > /dev/null
+      [ "$got" = "$stamp" ] && echo "Cloudflare: ok (wrote to R2, read back through dl.hyv.moe, deleted)" || { echo "wrote to R2 but dl.hyv.moe returned something else"; exit 1; }
